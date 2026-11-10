@@ -1,0 +1,32 @@
+# Shared gitleaks config: default rules plus Claude Code allow-rule leaks, passwords, EIN/SSN, auth headers.
+title = "aaron global gitleaks"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "claude-allow-rule-secret"
+description = "Secret embedded in a Claude Code permission allow rule (settings.json or settings.local.json)"
+regex = '''(?i)(Bash|PowerShell)\([^"]*(token|apikey|api[_-]key|secret|password|bearer|authorization)[^"]*[=: ]+['\\"]*[A-Za-z0-9._\-]{12,}'''
+path = '''(?i)settings(\.local)?\.json$'''
+
+[[rules]]
+id = "ein-or-ssn"
+description = "Own EIN or SSN-shaped number next to a label"
+regex = '''(?i)(own ein|my ein|ssn|social security)[^\n]{0,30}\b(\d{2}-\d{7}|\d{3}-\d{2}-\d{4})\b'''
+
+[[rules]]
+id = "auth-header"
+description = "Authorization header or token flag in a command"
+regex = '''(?i)(authorization:\s*(bearer|basic|token)\s+[A-Za-z0-9._\-]{12,}|--(token|password|api-key|apikey)[ =]+[A-Za-z0-9._\-]{12,})'''
+
+[allowlist]
+description = "Reviewed false positives (2026-11-08)"
+regexes = ['''spike_local_only''', '''-proot''']
+paths = ['''\.gitleaks\.toml$''']
+
+# Added 2026-11-08 after the Apiiro article: passwords typed into commands, which key-format scanners miss.
+[[rules]]
+id = "password-in-command"
+description = "Password or token typed into a command line (sshpass -p, mysql -p, PGPASSWORD=, curl -u user:pass, connection string with password)"
+regex = '''(?i)(sshpass\s+-p\s*['\\"]?[^\s'\\"]{4,}|mysql[^\n"]{0,60}\s-p[^\s'\\"]{4,}|PGPASSWORD=['\\"]?[^\s'\\"$]{4,}|curl[^\n"]{0,80}\s(-u|--user)\s+[^\s:]+:[^\s'\\"$]{4,}|[a-z]+://[^/\s:@'\\"]+:[^/\s@'\\"$]{4,}@[a-z0-9.\-]+\.[a-z]{2,})'''
