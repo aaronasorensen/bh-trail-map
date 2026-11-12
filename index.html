@@ -4,6 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Baltimore Heritage Trails</title>
+<meta name="description" content="An interactive map of Baltimore Heritage's Five Minute Histories videos, grouped into walking trails by theme.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Baltimore Heritage Trails">
+<meta property="og:description" content="An interactive map of Baltimore Heritage's Five Minute Histories videos, grouped into walking trails by theme.">
+<meta property="og:url" content="https://aaronasorensen.github.io/bh-trail-map/">
+<meta property="og:image" content="https://aaronasorensen.github.io/bh-trail-map/preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Illustrated map of Baltimore with a numbered walking trail of history stops">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shrikhand&family=Amatic+SC:wght@700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,800&display=swap">
@@ -129,6 +139,8 @@
   .stats div { background: var(--trail-soft); border-radius: 10px; padding: 4px; display: flex; align-items: baseline; justify-content: center; gap: 5px; }
   .stats b { font-family: var(--font-display); font-weight: 400; font-size: 16px; color: var(--ink); font-variant-numeric: tabular-nums; }
   .stats span { font-size: 11.5px; color: var(--ink-soft); }
+  .credit { margin: 8px 0 0; font-size: 12px; line-height: 1.4; color: var(--ink-soft); }
+  .credit a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
   .note { font-size: 12px; color: var(--ink-soft); margin: 6px 0 0; line-height: 1.35; }
   .detail h2 { padding-right: 58px; }
   .guide .detail h2 { white-space: nowrap; text-wrap: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -272,6 +284,7 @@
         <div><b id="sSpan">&ndash;</b></div>
       </div>
       <p class="note" id="orderNote"></p>
+      <p class="credit">Built by <a href="https://makeitcount.llc/" target="_blank" rel="noopener">Make it Count</a>. Stories and videos from <a href="https://baltimoreheritage.org/" target="_blank" rel="noopener">Baltimore Heritage</a>&rsquo;s Five Minute Histories.</p>
     </div>
 
 
