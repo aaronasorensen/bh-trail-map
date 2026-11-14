@@ -14,6 +14,28 @@
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Illustrated map of Baltimore with a numbered walking trail of history stops">
 <meta name="twitter:card" content="summary_large_image">
+<script>
+/* Google Analytics 4 (Aaron, 2026-11-14): the same property as makeitcount.llc (Site Kit), loaded only on the public subdomain, so
+   the private WordPress copy, a local file or a test never counts. Respects Global Privacy Control and Do Not Track (no tag at all).
+   Consent Mode: visitors in the EEA, UK and Switzerland start with analytics storage denied (no cookies, anonymous pings only)
+   and there is no banner to grant it; everywhere else it is granted. Ad storage, ad personalization and Google signals are off.
+   window.BH_GA_TEST (set only by a local test) lets the tag run off the subdomain with every hit disabled. */
+(function () {
+  window.bhTrack = function () {};
+  var ID = 'G-FYNVH1C63Q', HOST = '5-min-histories.makeitcount.llc', test = !!window.BH_GA_TEST;
+  if (location.hostname !== HOST && !test) return;
+  if (navigator.globalPrivacyControl || navigator.doNotTrack === '1' || window.doNotTrack === '1') return;
+  if (test) window['ga-disable-' + ID] = true;
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () { dataLayer.push(arguments); };
+  gtag('consent', 'default', { analytics_storage: 'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', region: ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE','IS','LI','NO','GB','CH'] });
+  gtag('consent', 'default', { analytics_storage: 'granted', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' });
+  gtag('js', new Date());
+  gtag('config', ID, { allow_google_signals: false, allow_ad_personalization_signals: false });
+  var g = document.createElement('script'); g.async = true; g.src = 'https://www.googletagmanager.com/gtag/js?id=' + ID; document.head.appendChild(g);
+  window.bhTrack = function (name, params) { try { gtag('event', name, params || {}); } catch (e) { /* analytics never breaks the map */ } };
+})();
+</script>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shrikhand&family=Amatic+SC:wght@700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,800&display=swap">
@@ -567,6 +589,7 @@
   }
   function focusTrail(id, stop = null) {
     place(id); state.trail = id; state.current = stop; closeXfer(); save();
+    if (typeof bhTrack === 'function' && TRAIL.get(id)) bhTrack('trail_select', { trail_id: id, trail_name: TRAIL.get(id).name, walk_order: state.order, map_view: state.base });
     if (!stop) setMin('guideMain', false);     // a new trail with no stop picked: show the trail controls again
     render(!stop);
   }
@@ -1166,6 +1189,7 @@
 
   function select(id, zoomTo) {
     const starting = !state.current;
+    if (id !== state.current && S[id]) bhTrack('stop_open', { video_id: id, stop_title: S[id].title, trail_id: state.trail, trail_name: TRAIL.get(state.trail) ? TRAIL.get(state.trail).name : '', map_view: state.base });
     state.current = id;
     // (2026-10-17) the trail card no longer folds when a walk starts: Aaron wants it kept open while the video plays
     render(false);
@@ -1193,6 +1217,7 @@
     a.textContent = 'Watch the video';
     // Watch opens YouTube in its own browser window; if the browser refuses a window, the link's own tab is the fallback
     a.addEventListener('click', (ev) => {
+      bhTrack('video_watch_click', { video_id: id, stop_title: s.title });
       const w = window.open(a.href, '_blank', 'popup,width=1120,height=720');
       if (w) { ev.preventDefault(); try { w.opener = null; } catch (e) { /* ignore */ } }
     });
@@ -1218,7 +1243,14 @@
   }
 
   // ---- video card, the way Slack previews a YouTube link: thumbnail first, player only on play ----
-  let videoFor = null;
+  let videoFor = null, playedFor = null;
+  // the embedded player reports its state by postMessage; the first 'playing' per stop is one 'video_play'
+  window.addEventListener('message', (ev) => {
+    if (ev.origin !== 'https://www.youtube.com' || typeof ev.data !== 'string') return;
+    let d; try { d = JSON.parse(ev.data); } catch (e) { return; }
+    const st = d.event === 'onStateChange' ? d.info : d.event === 'infoDelivery' && d.info ? d.info.playerState : null;
+    if (st === 1 && videoFor && playedFor !== videoFor && S[videoFor]) { playedFor = videoFor; bhTrack('video_play', { video_id: videoFor, stop_title: S[videoFor].title }); }
+  });
   function showVideo(id, vb) {
     // the Claude Artifact host blocks YouTube's player frame (tested 2026-10-16, again 2026-10-22: CSP frame-src), so no
     // player there; the card points to the Google Site, where the video plays inside the map (Aaron, 2026-10-22)
@@ -1238,7 +1270,8 @@
     // youtube.com, not youtube-nocookie.com (Aaron, 2026-11-13): the no-cookie host never sees the viewer's YouTube sign-in, so a
     // Premium member got ads; the standard host recognizes a signed-in viewer and plays without them, and plays the same for a
     // signed-out viewer. Same click count either way.
-    f.src = `https://www.youtube.com/embed/${encodeURIComponent(id)}?rel=0`;
+    f.src = `https://www.youtube.com/embed/${encodeURIComponent(id)}?rel=0&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
+    f.addEventListener('load', () => { try { f.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), 'https://www.youtube.com'); f.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'addEventListener', args: ['onStateChange'], id: 1, channel: 'widget' }), 'https://www.youtube.com'); } catch (e) { /* ignore */ } });
     f.title = `Video: ${S[id].title}`; f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen'; f.allowFullscreen = true;
     f.referrerPolicy = 'strict-origin-when-cross-origin';
     vb.replaceChildren(f);
@@ -1295,6 +1328,7 @@
   const bIll = document.getElementById('bIll'), bStr = document.getElementById('bStr');
   function setBase(b) {
     if (b === 'street' && !streetG && !drawStreets()) b = 'ill';   // no street data baked in: stay illustrated
+    if (b !== state.base) bhTrack('map_view', { map_view: b });
     state.base = b;
     const street = b === 'street';
     if (streetG) streetG.attr('display', street ? null : 'none');
@@ -1384,11 +1418,12 @@
       return { stops, trails: [...tr.filter((x) => x.m).slice(0, 4), ...tr.filter((x) => !x.m).slice(0, 3)] };
     }
 
-    function pickTrail(tid) { focusTrail(tid); const first = orderOf(TRAIL.get(tid))[0]; if (first) select(first, true); afterPick(); }
+    function pickTrail(tid) { bhTrack('search_pick', { pick_type: 'trail', trail_id: tid }); focusTrail(tid); const first = orderOf(TRAIL.get(tid))[0]; if (first) select(first, true); afterPick(); }
     function pickStop(id) {
       const ok = (x) => ONMAP.has(x) && ONMAP.get(x).has(id);
       const tid = (ok(state.trail) && state.trail) || compared().find(ok) || (ok(S[id].primary) && S[id].primary) || S[id].themes.find(ok);
       if (!tid) return;
+      bhTrack('search_pick', { pick_type: 'stop', video_id: id, stop_title: S[id].title });
       focusTrail(tid); select(id, true); afterPick();
     }
     function afterPick() {
@@ -1434,6 +1469,8 @@
       if (results.length) setActive(0);
     }
     input.addEventListener('input', draw);
+    let sTimer = null;   // GA4's own 'search' event, once the visitor stops typing
+    input.addEventListener('input', () => { clearTimeout(sTimer); const q = input.value.trim(); if (q.length >= 3) sTimer = setTimeout(() => bhTrack('search', { search_term: q.slice(0, 60) }), 1200); });
     input.addEventListener('focus', () => { if (input.value.trim()) draw(); });
     input.addEventListener('blur', () => setTimeout(close, 120));
     input.addEventListener('keydown', (ev) => {
