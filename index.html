@@ -33,7 +33,7 @@
   gtag('consent', 'default', { analytics_storage: 'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', region: ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE','IS','LI','NO','GB','CH'] });
   gtag('consent', 'default', { analytics_storage: 'granted', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' });
   gtag('js', new Date());
-  gtag('config', ID, { allow_google_signals: false, allow_ad_personalization_signals: false });
+  gtag('config', ID, { allow_google_signals: false, allow_ad_personalization_signals: false, send_page_view: false });   // page views are sent by the map itself, one per view (see sendView)
   var g = document.createElement('script'); g.async = true; g.src = 'https://www.googletagmanager.com/gtag/js?id=' + ID; document.head.appendChild(g);
   window.bhTrack = function (name, params) { try { gtag('event', name, params || {}); } catch (e) { /* analytics never breaks the map */ } };
 })();
@@ -1587,7 +1587,16 @@
 
 
   // ---- URL sync: write the view into the address bar, and restore it on Back / Forward ----------------
-  let applyingUrl = false, lastViewKey = null, urlTimer = null;
+  let applyingUrl = false, lastViewKey = null, urlTimer = null, viewSent = false;
+  // The page view carries the full address (page_location, with the query string) and the view's parts as event parameters, which are
+  // registered as custom dimensions in GA4 (Trail ID, Trail name, Stop title, Video ID, Walk order, Map view). The stream's own
+  // "page changes based on browser history events" is switched off, so this is the only page view per view; zoom and pan send none.
+  function sendView() {
+    const tr = TRAIL.get(state.trail), st = state.current && S[state.current], mic = micOpen && !state.current;
+    bhTrack('page_view', { page_location: location.href, page_title: `Baltimore Heritage Trails: ${tr ? tr.name : ''}${st ? ' / ' + st.title : mic ? ' / ' + MIC.title : ''}`,
+      trail_id: state.trail, trail_name: tr ? tr.name : '', stop_title: st ? st.title : mic ? MIC.title : '', video_id: state.current || (mic ? MIC.id : ''),
+      walk_order: state.order, map_view: state.base });
+  }
   function viewQuery(withZoom) {
     const q = new URLSearchParams();
     const slots = state.cmp.slice(); while (slots.length && !slots[slots.length - 1]) slots.pop();
@@ -1606,14 +1615,11 @@
       const key = viewQuery(false);
       const newView = key !== lastViewKey;   // the view changed (not just the zoom): written without z, because the zoom is still moving; its 'end' adds z
       const full = newView ? key : viewQuery(true);
-      if (full === location.search.slice(1)) { lastViewKey = key; return; }
+      if (full === location.search.slice(1)) { lastViewKey = key; if (!viewSent) { viewSent = true; sendView(); } return; }
       const push = lastViewKey !== null && newView;   // a new view is a history entry; a zoom or the first write is not
       history[push ? 'pushState' : 'replaceState'](null, '', '?' + full);
       lastViewKey = key;
-      if (push && typeof bhTrack === 'function') {
-        const tr = TRAIL.get(state.trail);
-        bhTrack('page_view', { page_location: location.href, page_title: `Baltimore Heritage Trails: ${tr ? tr.name : ''}${state.current && S[state.current] ? ' / ' + S[state.current].title : ''}` });
-      }
+      if (push || !viewSent) { viewSent = true; sendView(); }   // one Google Analytics page view per view: the first, then each new one
     } catch (e) { /* the address bar is a convenience; the map never depends on it */ }
   }
   zoom.on('end.url', () => { clearTimeout(urlTimer); urlTimer = setTimeout(urlSync, 400); });
@@ -1628,7 +1634,7 @@
       if (u.z || u.stop) svg.call(zoom.transform, stopTransform(u.stop, u.z));
     } finally { applyingUrl = false; lastViewKey = viewQuery(false); }
   }
-  window.addEventListener('popstate', () => { const u = parseUrl(); if (u) applyUrl(u); });
+  window.addEventListener('popstate', () => { const u = parseUrl(); if (u) { applyUrl(u); sendView(); } });
   if (U0 && (U0.z || U0.stop)) { render(false); svg.call(zoom.transform, stopTransform(U0.stop, U0.z)); } else render(true);
 })();
 </script>
