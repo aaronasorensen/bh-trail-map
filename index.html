@@ -94,7 +94,7 @@
     font-size: 13px; max-width: 240px; box-shadow: 3px 3px 0 var(--ink); }
   .maptip b { display: block; }
   /* the pointer over a leg becomes the walking figure (mouse and pen only; touch screens keep their usual behaviour) */
-  .hwalker { position: absolute; left: 0; top: 0; width: 22px; height: 32px; pointer-events: none; z-index: 5; will-change: transform; }
+  .hwalker { position: absolute; left: 0; top: 0; width: 37px; height: 54px; pointer-events: none; z-index: 5; will-change: transform; }
   .hwalker svg { display: block; overflow: visible; }
   .maptip span { color: var(--ink-soft); }
 
@@ -746,7 +746,7 @@
       const xs = transfers(id, t.id);   // transfer icons ride in the top row, beside the year
       if (xs.length) { const ri = document.createElement('span'); ri.className = 'rowicons'; ri.title = 'Transfer to: ' + xs.map((x) => TRAIL.get(x).name).join(', ');
         xs.forEach((x) => ri.appendChild(iconSvg(x, 15))); r1.appendChild(ri); }
-      if (st === 'here') r1.appendChild(miniWalker(tc));
+      if (st === 'here') r1.appendChild(miniWalker(tc, 1.4));
       b.append(r1, tt); b.addEventListener('click', () => select(id, true)); li.appendChild(b); return li;
     }
     const here = list.querySelector('.tstop.here');
@@ -841,8 +841,8 @@
     const r = document.getElementById('mapbox').getBoundingClientRect();
     if (!hw) { hw = document.createElement('div'); hw.className = 'hwalker'; hw.setAttribute('aria-hidden', 'true'); document.getElementById('mapbox').appendChild(hw); }
     const raven = state.order === 'geo', key = `${tid}|${raven ? 'raven' : 'walker'}`;   // Shortest walk: the raven flies; the other orders walk
-    if (hwTrail !== key) { hw.replaceChildren(raven ? ravenSvg() : miniWalker(colorOf(tid))); hwTrail = key; hw.style.width = raven ? '62px' : '22px'; hw.style.height = raven ? '56px' : '32px'; }
-    const offX = raven ? 31 : 11, offY = raven ? 28 : 29;
+    if (hwTrail !== key) { hw.replaceChildren(raven ? ravenSvg() : miniWalker(colorOf(tid), 1.7)); hwTrail = key; hw.style.width = raven ? '62px' : '37px'; hw.style.height = raven ? '56px' : '54px'; }
+    const offX = raven ? 31 : 19, offY = raven ? 28 : 49;
     if (hwX != null && Math.abs(ev.clientX - hwX) > 1) hwDir = ev.clientX > hwX ? 1 : -1;
     hwX = ev.clientX;
     hw.firstChild.style.transform = hwDir < 0 ? 'scaleX(-1)' : '';
@@ -1118,8 +1118,8 @@
     const sv = d3.create('svg').attr('class', 'mini raven').attr('width', 62).attr('height', 56).attr('viewBox', '-22 -20 44 40').attr('aria-hidden', 'true');
     drawRaven(sv.append('g')); return sv.node();
   }
-  function miniWalker(color) {
-    const sv = d3.create('svg').attr('class', 'mini').attr('width', 22).attr('height', 32).attr('viewBox', '-11 -22 22 37').attr('aria-hidden', 'true');
+  function miniWalker(color, k = 1) {
+    const sv = d3.create('svg').attr('class', 'mini').attr('width', 22 * k).attr('height', 32 * k).attr('viewBox', '-11 -22 22 37').attr('aria-hidden', 'true');
     drawWalker(sv.append('g'), color); return sv.node();
   }
   let walkerAt = null;   // the stop the walker stands at
@@ -1129,7 +1129,7 @@
     let w = walkG.select('.walker');
     if (w.empty()) {
       w = walkG.append('g').attr('class', 'walker');
-      w.append('g').attr('transform', 'translate(-32,-4) scale(1.5)').append('g').attr('class', 'flip');
+      w.append('g').attr('transform', 'translate(-34,-16) scale(2.4)').append('g').attr('class', 'flip');
     }
     w.select('.flip').selectAll('*').remove();
     drawWalker(w.select('.flip'), colorOf(state.trail));
