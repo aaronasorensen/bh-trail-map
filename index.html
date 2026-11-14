@@ -25,6 +25,8 @@
   var ID = 'G-FYNVH1C63Q', HOST = '5-min-histories.makeitcount.llc', test = !!window.BH_GA_TEST;
   if (location.hostname !== HOST && !test) return;
   if (navigator.globalPrivacyControl || navigator.doNotTrack === '1' || window.doNotTrack === '1') return;
+  // a visitor (Aaron, a test) can switch the tag off in this browser by opening any link with ?ga=off, and back on with ?ga=on
+  try { var m = /[?&]ga=(on|off)/.exec(location.search); if (m) localStorage.setItem('bh-ga-off', m[1] === 'off' ? '1' : '0'); if (localStorage.getItem('bh-ga-off') === '1') return; } catch (e) { /* no storage: tag stays on */ }
   if (test) window['ga-disable-' + ID] = true;
   window.dataLayer = window.dataLayer || [];
   window.gtag = function () { dataLayer.push(arguments); };
@@ -573,6 +575,32 @@
       state.cmp = c;
     }
   } catch (e) { /* storage unavailable */ }
+  // ---- shareable URL (Aaron, 2026-11-14) -------------------------------------------------------------
+  // Every choice lives in the query string, so a link reopens the same view:
+  //   ?trails=a,,b&focus=a&stop=VIDEOID&order=time&map=street&z=k,x,y
+  // trails = the five slots in order (a gap keeps its colour), focus = the trail in focus, stop = the stop in focus (its video
+  // opens), order = geo (default) | time | era, map = street (default illustrated), z = zoom scale and offset. A new view (trail,
+  // stop, order or map change) is a history entry, so Back steps through them; zooming and panning only rewrite the current entry.
+  // A query string rather than a hash, so Google Analytics sees the full address of every view.
+  const URLOK = location.protocol === 'http:' || location.protocol === 'https:';   // not in a srcdoc frame or a local file
+  function parseUrl() {
+    if (!URLOK) return null;
+    const q = new URLSearchParams(location.search);
+    if (!q.has('trails') && !q.has('focus') && !q.has('stop')) return null;
+    const cmp = [null, null, null, null, null];
+    (q.get('trails') || '').split(',').slice(0, 5).forEach((x, i) => { if (D.trails.some((t) => t.id === x)) cmp[i] = x; });
+    let stop = q.get('stop'); if (!(stop && D.stops[stop])) stop = null;
+    let focus = q.get('focus');
+    if (!D.trails.some((t) => t.id === focus)) focus = cmp.find(Boolean) || (stop && (D.stops[stop].primary || D.stops[stop].themes[0])) || null;
+    if (!focus || !D.trails.some((t) => t.id === focus)) return null;
+    if (!cmp.includes(focus)) cmp[cmp.indexOf(null) >= 0 ? cmp.indexOf(null) : 0] = focus;
+    if (stop && !D.trails.find((t) => t.id === focus).stops_geo.includes(stop)) stop = null;   // not on the trail in focus
+    const zs = (q.get('z') || '').split(',').map(Number);
+    const z = zs.length === 3 && zs.every(Number.isFinite) && zs[0] >= 0.8 && zs[0] <= 14 ? zs : null;
+    return { cmp, focus, stop, order: ['geo', 'time', 'era'].includes(q.get('order')) ? q.get('order') : 'geo', map: q.get('map') === 'street' ? 'street' : 'ill', z };
+  }
+  const U0 = parseUrl();
+  if (U0) state = { ...state, cmp: U0.cmp, trail: U0.focus, order: U0.order, base: U0.map, current: U0.stop };
   const save = () => { try { localStorage.setItem('bh-trails', JSON.stringify({ trail: state.trail, order: state.order, cmp: state.cmp, base: state.base })); } catch (e) { /* ignore */ } };
   const colorOf = (id) => PAL[state.cmp.indexOf(id)] || 'var(--ink)';
   // tour shades of a trail colour: visited = darker (mixed toward the ink), here = the colour itself,
@@ -648,7 +676,8 @@
   const fmtYear = (y) => (y == null ? 'undated' : String(y));
   const short = (s) => (s.length > 34 ? s.slice(0, 32) + '…' : s);
 
-  function render(refit) {
+  function render(refit) { renderCore(refit); urlSync(); }
+  function renderCore(refit) {
     document.querySelector('.wrap').classList.toggle('walking', !!state.current);
     document.querySelector('.wrap').classList.toggle('many', compared().length >= 3);   // three or more trails: intro and note give way
     const t = D.trails.find((x) => x.id === state.trail);
@@ -1481,7 +1510,50 @@
     });
   })();
 
-  render(true);
+
+  // ---- URL sync: write the view into the address bar, and restore it on Back / Forward ----------------
+  let applyingUrl = false, lastViewKey = null, urlTimer = null;
+  function viewQuery(withZoom) {
+    const q = new URLSearchParams();
+    const slots = state.cmp.slice(); while (slots.length && !slots[slots.length - 1]) slots.pop();
+    q.set('trails', slots.map((x) => x || '').join(','));
+    q.set('focus', state.trail);
+    if (state.current) q.set('stop', state.current);
+    if (state.order !== 'geo') q.set('order', state.order);
+    if (state.base === 'street') q.set('map', 'street');
+    if (withZoom) { const t = d3.zoomTransform(svg.node()); q.set('z', [t.k, t.x, t.y].map((v) => +v.toFixed(2)).join(',')); }
+    return q.toString().replace(/%2C/g, ',');
+  }
+  function urlSync() {
+    if (!URLOK || applyingUrl) return;
+    try {
+      const key = viewQuery(false);
+      const newView = key !== lastViewKey;   // the view changed (not just the zoom): written without z, because the zoom is still moving; its 'end' adds z
+      const full = newView ? key : viewQuery(true);
+      if (full === location.search.slice(1)) { lastViewKey = key; return; }
+      const push = lastViewKey !== null && newView;   // a new view is a history entry; a zoom or the first write is not
+      history[push ? 'pushState' : 'replaceState'](null, '', '?' + full);
+      lastViewKey = key;
+      if (push && typeof bhTrack === 'function') {
+        const tr = TRAIL.get(state.trail);
+        bhTrack('page_view', { page_location: location.href, page_title: `Baltimore Heritage Trails: ${tr ? tr.name : ''}${state.current && S[state.current] ? ' / ' + S[state.current].title : ''}` });
+      }
+    } catch (e) { /* the address bar is a convenience; the map never depends on it */ }
+  }
+  zoom.on('end.url', () => { clearTimeout(urlTimer); urlTimer = setTimeout(urlSync, 400); });
+  function stopTransform(id, z) { return z ? d3.zoomIdentity.translate(z[1], z[2]).scale(z[0]) : d3.zoomIdentity.translate(W / 2, H / 2).scale(Math.max(k, 5)).translate(-X(S[id].lon), -Y(S[id].lat)); }
+  function applyUrl(u) {
+    applyingUrl = true;
+    try {
+      state.cmp = u.cmp; state.trail = u.focus; state.order = u.order; state.current = u.stop;
+      save(); closeXfer();
+      if (u.map !== state.base) setBase(u.map);
+      render(!u.stop && !u.z);
+      if (u.z || u.stop) svg.call(zoom.transform, stopTransform(u.stop, u.z));
+    } finally { applyingUrl = false; lastViewKey = viewQuery(false); }
+  }
+  window.addEventListener('popstate', () => { const u = parseUrl(); if (u) applyUrl(u); });
+  if (U0 && (U0.z || U0.stop)) { render(false); svg.call(zoom.transform, stopTransform(U0.stop, U0.z)); } else render(true);
 })();
 </script>
 
