@@ -236,47 +236,18 @@
     .wk-leg-b, .wk-arm-a { animation: wkB .62s ease-in-out infinite alternate; }
     .wk-bob { animation: wkBob .31s ease-in-out infinite alternate; }
   }
-  /* the raven (Shortest walk edge hovers): a wingbeat after the bluebird reference GIF Aaron gave. Each wing turns one way round
-     the shoulder, a full circle per beat: it starts straight up, sweeps forward and DOWN (fast power stroke) until it hangs
-     below the body, is drawn back and folded along the body (hand curled in), then lifts up behind the shoulder to the top.
-     The hand trails the arm on the downstroke and curls on the recovery. The body rises on the downstroke and sinks on the
-     recovery, the tail pitches against it. Still (wings up) for reduced motion. */
-  .rv-arm { transform: rotate(-8deg); }
-  .rv-hand { transform: rotate(0deg); }
+  /* the raven (Shortest walk edge hovers): eight hand-drawn poses copied from the bluebird reference GIF Aaron gave, shown one
+     after another (80 ms each, 0.64 s a beat) instead of turning one rigid wing. Poses: wings up, swept back, forward-down,
+     hanging, hanging low, folded back, rising, spread. The bird is seen three-quarter on, head and beak toward the viewer.
+     Reduced motion shows the first pose (wings up) only. */
+  .rvf { visibility: hidden; }
+  .rvf-0 { visibility: visible; }
   @media (prefers-reduced-motion: no-preference) {
-    .rv-arm { animation: rvArm .64s linear infinite; }
-    .rv-hand { animation: rvHand .64s linear infinite; }
-    .rv-far .rv-arm, .rv-far .rv-hand { animation-delay: -.04s; }
-    .rv-bob { animation: rvBob .64s linear infinite; }
-    .rv-tail { animation: rvTail .64s linear infinite; }
+    .rvf { animation: rvShow .64s steps(1, end) infinite; visibility: hidden; }
+    .rvf-0 { animation-delay: 0s; } .rvf-1 { animation-delay: .08s; } .rvf-2 { animation-delay: .16s; } .rvf-3 { animation-delay: .24s; }
+    .rvf-4 { animation-delay: .32s; } .rvf-5 { animation-delay: .4s; } .rvf-6 { animation-delay: .48s; } .rvf-7 { animation-delay: .56s; }
   }
-  @keyframes rvArm {
-    0% { transform: rotate(-8deg); animation-timing-function: cubic-bezier(.5, 0, .75, .6); }
-    14% { transform: rotate(60deg); animation-timing-function: cubic-bezier(.2, .4, .5, 1); }
-    30% { transform: rotate(172deg); animation-timing-function: ease-in-out; }
-    44% { transform: rotate(196deg); animation-timing-function: cubic-bezier(.4, 0, .6, 1); }
-    62% { transform: rotate(262deg); animation-timing-function: cubic-bezier(.3, 0, .5, 1); }
-    100% { transform: rotate(352deg); }
-  }
-  @keyframes rvHand {
-    0% { transform: rotate(4deg) scale(1); animation-timing-function: ease-in; }
-    14% { transform: rotate(-28deg) scale(1.03); animation-timing-function: ease-out; }
-    30% { transform: rotate(-4deg) scale(1); animation-timing-function: ease-in-out; }
-    44% { transform: rotate(24deg) scale(.82); animation-timing-function: ease-in-out; }
-    62% { transform: rotate(52deg) scale(.68); animation-timing-function: ease-in-out; }
-    84% { transform: rotate(18deg) scale(.9); animation-timing-function: ease-out; }
-    100% { transform: rotate(4deg) scale(1); }
-  }
-  @keyframes rvBob {
-    0% { transform: translateY(1.8px); animation-timing-function: ease-in-out; }
-    26% { transform: translateY(-1.9px); animation-timing-function: ease-in-out; }
-    100% { transform: translateY(1.8px); }
-  }
-  @keyframes rvTail {
-    0% { transform: rotate(-6deg); animation-timing-function: ease-in-out; }
-    26% { transform: rotate(7deg); animation-timing-function: ease-in-out; }
-    100% { transform: rotate(-6deg); }
-  }
+  @keyframes rvShow { 0% { visibility: visible; } 12.5% { visibility: hidden; } 100% { visibility: hidden; } }
   @keyframes wkA { from { transform: rotate(26deg); } to { transform: rotate(-26deg); } }
   @keyframes wkB { from { transform: rotate(-26deg); } to { transform: rotate(26deg); } }
   @keyframes wkBob { from { transform: translateY(0); } to { transform: translateY(-1.3px); } }
@@ -1104,33 +1075,44 @@
     bob.append('path').attr('d', 'M-3.4,-18.2 A4,4 0 0 1 4.6,-18.2 Z').attr('fill', color).attr('stroke', 'var(--ink)').attr('stroke-width', 1.2);
     bob.append('path').attr('d', 'M3.8,-18.3 L7.6,-17.6').attr('stroke', 'var(--ink)').attr('stroke-width', 1.8).attr('stroke-linecap', 'round');
   }
-  // an original raven in the map's hand-inked style, three-quarter view: the head and beak turn toward the viewer (facing +x),
-  // the near wing sweeps in front of the body and the far wing shows behind it
+  // an original raven in the map's hand-inked style, three-quarter view (head and beak toward the viewer, facing +x).
+  // It is a sprite sequence: eight poses, each with its own far wing and near wing, copied from the reference GIF.
   function drawRaven(g) {
-    const bob = g.append('g').attr('class', 'rv-bob');
-    const ink = 'var(--ink)', ring = (e, w = 1.5) => e.attr('stroke', 'var(--panel)').attr('stroke-width', w).attr('stroke-linejoin', 'round').attr('paint-order', 'stroke');
-    // a wing is a broad arm from the shoulder to the wrist plus a hand of feathers that flexes about the wrist
-    const wing = (cls, fill, dx, dy, k) => {
-      const sh = bob.append('g').attr('class', cls).attr('transform', `translate(${dx},${dy}) scale(${k})`);
-      const arm = sh.append('g').attr('class', 'rv-arm');
-      ring(arm.append('path').attr('d', 'M-3.8,0.8 C-5.2,-3.6 -3.6,-8 -0.4,-10.4 L6.8,-9 C5.6,-6 4.6,-2.6 4,0.8 Z').attr('fill', fill));
-      const hand = arm.append('g').attr('transform', 'translate(3.4,-9.2)').append('g').attr('class', 'rv-hand');
-      ring(hand.append('path').attr('d', 'M-4.4,1 C-6.2,-4.2 -1.6,-9.6 4.2,-14.6 L4,-11.2 L8.8,-12.8 L6,-9.2 L11,-9.4 L6.8,-5.8 L9.8,-3.2 L4.6,-1.8 C2.8,1.6 -1,2.4 -4.4,1 Z').attr('fill', fill));
-    };
-    wing('rv-far', 'var(--ink-soft)', -3.5, -3.5, .92);
-    // tail fan, behind the body
-    ring(bob.append('g').attr('transform', 'translate(-9,3)').append('g').attr('class', 'rv-tail').append('path').attr('d', 'M0,-2 L-8,-4.4 L-7.4,-1.4 L-9,1.2 L-6.8,2.8 L0,2.2 Z').attr('fill', ink));
-    // body: a plump egg, tilted a little, seen from the front-side
-    ring(bob.append('ellipse').attr('cx', -2).attr('cy', 2.2).attr('rx', 8.4).attr('ry', 6.8).attr('transform', 'rotate(-16 -2 2.2)').attr('fill', ink));
-    // legs peek out under the body
-    bob.append('path').attr('d', 'M-3,8.4 L-3.4,11.4 M-3.4,11.4 L-5,12 M-3.4,11.4 L-1.8,12.2 M1,8.8 L1.2,11.6 M1.2,11.6 L-0.4,12.2 M1.2,11.6 L2.8,12.2').attr('stroke', ink).attr('stroke-width', .9).attr('stroke-linecap', 'round').attr('fill', 'none');
-    // head turned toward the viewer: big round head, heavy beak pointing forward and a little toward us
-    ring(bob.append('circle').attr('cx', 7.4).attr('cy', -2.4).attr('r', 6.2).attr('fill', ink));
-    ring(bob.append('path').attr('d', 'M11.4,-2.2 C14.6,-2.8 17.4,-1.2 19.4,1.2 C16.4,2 13.4,2.6 10.8,2.4 Z').attr('fill', ink), 1.3);
-    bob.append('path').attr('d', 'M12,-0.2 C14.4,-0.1 16.6,0.4 18.2,1.1').attr('stroke', 'var(--panel)').attr('stroke-width', .6).attr('fill', 'none').attr('stroke-linecap', 'round');
-    bob.append('circle').attr('cx', 9.6).attr('cy', -3.8).attr('r', 1.7).attr('fill', 'var(--panel)');
-    bob.append('circle').attr('cx', 10.1).attr('cy', -3.7).attr('r', .85).attr('fill', ink);
-    wing('rv-near', ink, -1.5, -2, 1);
+    const ink = 'var(--ink)', soft = 'var(--ink-soft)';
+    const ring = (e, w = 1.3) => e.attr('stroke', 'var(--panel)').attr('stroke-width', w).attr('stroke-linejoin', 'round').attr('paint-order', 'stroke');
+    // [far wing, near wing, body dy]
+    const POSES = [
+      ['M2,-5 C1,-10 2,-14 3,-17.5 L4.6,-13.6 L5.8,-17.4 L6.8,-12.8 L8.4,-15 L8.4,-9 C7.4,-7 6.2,-6 5,-5 Z',
+       'M-5,1 C-8.4,-6 -8.6,-12 -6.8,-18.6 L-4.8,-14.6 L-4,-19 L-2.4,-14.2 L-0.8,-17.4 L-0.4,-11 C0.4,-7 0.2,-3 -0.6,1 Z', 0],
+      ['M5,6 C8,7 10,8 11.4,10.6 L8.2,9.8 L9.2,12 L5.2,10 Z',
+       'M-3,0 C-8,-2 -14,-3.4 -20.4,-1.8 L-16,0 L-20.6,2 L-15.6,2.8 L-18.4,5.4 L-11,4.2 C-8,4.6 -5,3.6 -3,2 Z', 1],
+      ['M-8,1 C-9.4,5 -9.4,9.6 -8.2,13.6 L-10.6,14.8 L-7.4,16 L-8,17.8 L-4.4,15.6 C-4.8,10.4 -5,5 -5,1 Z',
+       'M-4,0 C-2,4 0,8.4 1,12.4 L-1.6,14 L1.8,15 L0,16.8 L4.2,16 C4.8,12 4.2,6 2.4,0 Z', 2],
+      ['M-8,1 C-8.6,6 -8.6,11 -8.2,15.6 L-10.2,17.4 L-7.2,17.6 L-6.4,19.2 L-4.4,17.2 C-4.6,11 -5,5 -5,1 Z',
+       'M-3.4,0 C-4,5 -4,10.6 -3.6,15.8 L-5.8,17.8 L-2.6,18.2 L-1.8,19.8 L0.6,17.8 L2.2,18.2 C2.2,11.4 1.8,5.4 1.6,0 Z', 1],
+      ['M-8,1 C-8.6,7 -8.6,12 -8.2,17 L-10.2,18.6 L-7.2,18.8 L-6.4,20 L-4.4,18.2 C-4.6,12 -5,5 -5,1 Z',
+       'M-3.4,0 C-4,6 -4,12 -3.6,17.4 L-5.8,19 L-2.6,19.4 L-1.8,20.4 L0.6,19 L2.2,19.4 C2.2,12.4 1.8,6 1.6,0 Z', 0],
+      ['M5,7 L8.8,8.6 L7.2,9.8 L9.2,11.2 L5,10.6 Z',
+       'M-3,0 C-8,0 -13,1 -17.8,2.6 L-14.2,3.8 L-18.2,5.8 L-12,5.8 C-8,5.4 -5,4.4 -3,3 Z', 2],
+      ['M4,-5 C5,-8 8,-10 11,-9.4 L9.4,-7.4 L11.6,-6.4 L8,-5.4 Z',
+       'M-3,0 C-8.4,-2.4 -13.4,-5.6 -19.4,-8.6 L-16.4,-9.8 L-20,-12 L-14.6,-11.4 L-15.6,-14.4 C-10,-12 -6,-8 -1,-3.6 Z', 2],
+      ['M2,-5 C1,-9 2.6,-13 5,-16 L5.8,-12.6 L8,-15.2 L8,-10.4 C7.2,-8 6,-6.4 5,-5 Z',
+       'M-5,1 C-9,-5.4 -10.2,-11 -9,-17.6 L-6.6,-14 L-5.4,-18.4 L-3.4,-13.8 L-1.8,-16.6 L-0.8,-10.6 C0,-6.6 0,-3 -0.6,1 Z', 0],
+    ];
+    POSES.forEach(([far, near, dy], i) => {
+      const f = g.append('g').attr('class', `rvf rvf-${i}`).attr('transform', `translate(0,${dy * .5})`);
+      ring(f.append('path').attr('d', far).attr('fill', soft));
+      ring(f.append('g').attr('transform', 'translate(-9,3)').append('path').attr('d', 'M0,-2 L-8,-4.4 L-7.4,-1.4 L-9,1.2 L-6.8,2.8 L0,2.2 Z').attr('fill', ink));
+      ring(f.append('ellipse').attr('cx', -2).attr('cy', 2.6).attr('rx', 7.6).attr('ry', 6).attr('transform', 'rotate(-14 -2 2.6)').attr('fill', ink));
+      f.append('path').attr('d', 'M-3,8 L-3.4,11 M-3.4,11 L-5,11.6 M-3.4,11 L-1.8,11.8 M1,8.4 L1.2,11.2 M1.2,11.2 L-0.4,11.8 M1.2,11.2 L2.8,11.8').attr('stroke', ink).attr('stroke-width', .9).attr('stroke-linecap', 'round').attr('fill', 'none');
+      ring(f.append('path').attr('d', near).attr('fill', ink));
+      // head turned toward the viewer: big round head, heavy beak
+      ring(f.append('circle').attr('cx', 7.4).attr('cy', -2.4).attr('r', 6.2).attr('fill', ink));
+      ring(f.append('path').attr('d', 'M11.4,-2.2 C14.6,-2.8 17.4,-1.2 19.4,1.2 C16.4,2 13.4,2.6 10.8,2.4 Z').attr('fill', ink), 1.3);
+      f.append('path').attr('d', 'M12,-0.2 C14.4,-0.1 16.6,0.4 18.2,1.1').attr('stroke', 'var(--panel)').attr('stroke-width', .6).attr('fill', 'none').attr('stroke-linecap', 'round');
+      f.append('circle').attr('cx', 9.6).attr('cy', -3.8).attr('r', 1.7).attr('fill', 'var(--panel)');
+      f.append('circle').attr('cx', 10.1).attr('cy', -3.7).attr('r', .85).attr('fill', ink);
+    });
   }
   function ravenSvg() {
     const sv = d3.create('svg').attr('class', 'mini raven').attr('width', 62).attr('height', 56).attr('viewBox', '-22 -20 44 40').attr('aria-hidden', 'true');
