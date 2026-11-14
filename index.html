@@ -960,12 +960,15 @@
   // the walking figure follows the pointer over a leg, facing the way the pointer moves (CSS cannot animate a cursor)
   const FINE = !!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches);
   let hw = null, hwTrail = null, hwX = null, hwDir = 1;
-  function moveWalker(ev, tid) {
+  function moveWalker(ev, tid, a) {
     if (!FINE) return;
     const r = document.getElementById('mapbox').getBoundingClientRect();
     if (!hw) { hw = document.createElement('div'); hw.className = 'hwalker'; hw.setAttribute('aria-hidden', 'true'); document.getElementById('mapbox').appendChild(hw); }
-    const raven = state.base !== 'street', key = `${tid}|${raven ? 'raven' : 'walker'}`;   // the hover figure follows the map style only (Aaron, 2026-11-14): the Illustrated map always shows the raven, the Street map always the walker
-    if (hwTrail !== key) { hw.replaceChildren(raven ? ravenSvg() : miniWalker('#5a2fa0', 1.7, true)); hwTrail = key; hw.style.width = raven ? '62px' : '37px'; hw.style.height = raven ? '56px' : '54px'; }
+    // the Street map always shows the walking man. On the Illustrated map the hover figure is a bird that depends on the edge (Aaron,
+    // 2026-11-14): the trail's first edge a raven, the second a Baltimore oriole, the third a pink flamingo, the fourth a raven again, and so on
+    const fig = state.base === 'street' ? 'walker' : BIRDS[Math.max(0, orderOf(TRAIL.get(tid)).indexOf(a)) % BIRDS.length];
+    const raven = fig !== 'walker', key = `${tid}|${fig}`;
+    if (hwTrail !== key) { hw.replaceChildren(raven ? birdSvg(fig) : miniWalker('#5a2fa0', 1.7, true)); hwTrail = key; hw.style.width = raven ? '62px' : '37px'; hw.style.height = raven ? '56px' : '54px'; }
     const offX = raven ? 31 : 19, offY = raven ? 28 : 49;
     if (hwX != null && Math.abs(ev.clientX - hwX) > 1) hwDir = ev.clientX > hwX ? 1 : -1;
     hwX = ev.clientX;
@@ -975,7 +978,7 @@
   }
   function hideWalker() { if (hw) hw.hidden = true; hwX = null; hwTrail = null; }
   function showLeg(ev, tid, a, b, focus) {
-    moveWalker(ev, tid);
+    moveWalker(ev, tid, a);
     const r = document.getElementById('mapbox').getBoundingClientRect();
     tip.innerHTML = '';
     const bb = document.createElement('b'); bb.textContent = `${S[a].title} \u2192 ${S[b].title}`;
@@ -1200,10 +1203,14 @@
     bob.append('path').attr('d', 'M-3.4,-18.2 A4,4 0 0 1 4.6,-18.2 Z').attr('fill', color).attr('stroke', ink).attr('stroke-width', 1.2);
     bob.append('path').attr('d', 'M3.8,-18.3 L7.6,-17.6').attr('stroke', ink).attr('stroke-width', 1.8).attr('stroke-linecap', 'round');
   }
-  // an original raven in the map's hand-inked style, three-quarter view (head and beak toward the viewer, facing +x).
-  // It is a sprite sequence: eight poses, each with its own far wing and near wing, copied from the reference GIF.
-  function drawRaven(g) {
+  // Three original birds in the map's hand-inked style, three-quarter view (head and beak toward the viewer, facing +x): the raven,
+  // the Baltimore oriole (Maryland's state bird, black and orange) and the pink flamingo (Hampden's lawn bird). All three share one
+  // sprite sequence: eight poses, each with its own far wing and near wing, copied from the reference GIF; only the colors, body,
+  // head, beak and (for the flamingo) neck and legs differ. The hover cursor cycles raven, oriole, flamingo by edge (see moveWalker).
+  const BIRDS = ['raven', 'oriole', 'flamingo'];
+  function drawBird(g, kind = 'raven') {
     const ink = '#5a2fa0', soft = '#9b7fd1';   // the raven and the hover walker share one clear purple (Aaron, 2026-11-14)
+    const COL = { raven: { wing: ink, far: soft }, oriole: { wing: '#26222f', far: '#625c70' }, flamingo: { wing: '#f4709e', far: '#f9a9c4' } }[kind];
     const ring = (e, w = 1.3) => e.attr('stroke', 'var(--panel)').attr('stroke-width', w).attr('stroke-linejoin', 'round').attr('paint-order', 'stroke');
     // [far wing, near wing, body dy]
     const POSES = [
@@ -1226,6 +1233,7 @@
     ];
     POSES.forEach(([far, near, dy], i) => {
       const f = g.append('g').attr('class', `rvf rvf-${i}`).attr('transform', `translate(0,${dy * .5})`);
+      if (kind !== 'raven') { drawBirdParts(f, kind, far, near, ring, COL); return; }
       ring(f.append('path').attr('d', far).attr('fill', soft));
       ring(f.append('g').attr('transform', 'translate(-9,3)').append('path').attr('d', 'M0,-2 L-8,-4.4 L-7.4,-1.4 L-9,1.2 L-6.8,2.8 L0,2.2 Z').attr('fill', ink));
       ring(f.append('ellipse').attr('cx', -2).attr('cy', 2.6).attr('rx', 7.6).attr('ry', 6).attr('transform', 'rotate(-14 -2 2.6)').attr('fill', ink));
@@ -1239,10 +1247,41 @@
       f.append('circle').attr('cx', 10.1).attr('cy', -3.7).attr('r', .85).attr('fill', ink);
     });
   }
-  function ravenSvg() {
-    const sv = d3.create('svg').attr('class', 'mini raven').attr('width', 62).attr('height', 56).attr('viewBox', '-22 -20 44 40').attr('aria-hidden', 'true');
-    drawRaven(sv.append('g')); return sv.node();
+  // the oriole and the flamingo: the same wing poses, a different body
+  function drawBirdParts(f, kind, far, near, ring, COL) {
+    if (kind === 'oriole') {
+      const orange = '#f28c28', black = '#17141f';
+      ring(f.append('path').attr('d', far).attr('fill', COL.far));
+      ring(f.append('g').attr('transform', 'translate(-8,3)').append('path').attr('d', 'M0,-2 L-9,-3.6 L-8.4,-0.8 L-9.6,1.6 L0,2.2 Z').attr('fill', black));
+      ring(f.append('ellipse').attr('cx', -1.4).attr('cy', 2.4).attr('rx', 7).attr('ry', 5.4).attr('transform', 'rotate(-14 -1.4 2.4)').attr('fill', orange));
+      f.append('path').attr('d', 'M-2.6,7.4 L-2.8,10.6 M-2.8,10.6 L-4.2,11.2 M-2.8,10.6 L-1.4,11.4 M1,7.8 L1.2,10.8 M1.2,10.8 L-0.2,11.4 M1.2,10.8 L2.6,11.4').attr('stroke', '#6b7480').attr('stroke-width', .9).attr('stroke-linecap', 'round').attr('fill', 'none');
+      ring(f.append('path').attr('d', near).attr('fill', COL.wing));
+      f.append('path').attr('d', 'M-3,-1 C-1.6,-1.6 -0.4,-0.6 0.6,0.4').attr('stroke', '#ffffff').attr('stroke-width', 1.4).attr('stroke-linecap', 'round').attr('fill', 'none');   // the white wing bar
+      ring(f.append('circle').attr('cx', 6.8).attr('cy', -2.2).attr('r', 4.9).attr('fill', black));
+      ring(f.append('path').attr('d', 'M10.4,-2.6 L18.4,-0.4 L10.4,0.8 Z').attr('fill', '#7d8794'), 1.1);   // slender pointed bill
+      f.append('circle').attr('cx', 8.8).attr('cy', -3.4).attr('r', 1.3).attr('fill', '#ffffff');
+      f.append('circle').attr('cx', 9.2).attr('cy', -3.3).attr('r', .65).attr('fill', black);
+    } else {
+      const pink = '#f4709e', blush = '#f9a9c4', dark = '#262446';
+      f.append('path').attr('d', 'M-4,6.6 L-15,13.6 M-1,7.2 L-11.6,15.4').attr('stroke', pink).attr('stroke-width', 1.5).attr('stroke-linecap', 'round').attr('fill', 'none');   // long legs trailing behind
+      ring(f.append('path').attr('d', far).attr('fill', COL.far));
+      ring(f.append('g').attr('transform', 'translate(-9,3)').append('path').attr('d', 'M0,-2 L-6,-3.4 L-5.4,-0.6 L-6.6,1.8 L0,2.2 Z').attr('fill', blush));
+      ring(f.append('ellipse').attr('cx', -1.6).attr('cy', 2.6).attr('rx', 7.4).attr('ry', 5.2).attr('transform', 'rotate(-10 -1.6 2.6)').attr('fill', pink));
+      ring(f.append('path').attr('d', near).attr('fill', COL.wing));
+      // the long S-curved neck, a white outline under the pink, then the small head and the down-bent black-tipped bill
+      f.append('path').attr('d', 'M4,-1.6 C9.4,-3 9.4,-10 13.6,-10.6').attr('stroke', 'var(--panel)').attr('stroke-width', 4.6).attr('stroke-linecap', 'round').attr('fill', 'none');
+      f.append('path').attr('d', 'M4,-1.6 C9.4,-3 9.4,-10 13.6,-10.6').attr('stroke', pink).attr('stroke-width', 3).attr('stroke-linecap', 'round').attr('fill', 'none');
+      ring(f.append('circle').attr('cx', 14.2).attr('cy', -11).attr('r', 2.7).attr('fill', pink));
+      ring(f.append('path').attr('d', 'M16,-12.2 C18.6,-12.4 20.2,-10.8 20.4,-8.6 L18.6,-9.8 C17.6,-10.6 16.6,-10.4 16,-10.2 Z').attr('fill', '#f5d9c8'), 1);
+      f.append('path').attr('d', 'M18.8,-10.8 C19.8,-10.4 20.4,-9.6 20.4,-8.6 L18.6,-9.8 Z').attr('fill', dark);
+      f.append('circle').attr('cx', 14.6).attr('cy', -11.6).attr('r', .9).attr('fill', dark);
+    }
   }
+  function birdSvg(kind) {
+    const sv = d3.create('svg').attr('class', 'mini raven').attr('data-bird', kind).attr('width', 62).attr('height', 56).attr('viewBox', '-22 -20 44 40').attr('aria-hidden', 'true');
+    drawBird(sv.append('g'), kind); return sv.node();
+  }
+  const ravenSvg = () => birdSvg('raven');
   function miniWalker(color, k = 1, solid = false) {
     const sv = d3.create('svg').attr('class', 'mini').attr('width', 22 * k).attr('height', 32 * k).attr('viewBox', '-11 -22 22 37').attr('aria-hidden', 'true');
     drawWalker(sv.append('g'), color, solid); return sv.node();
