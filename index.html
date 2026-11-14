@@ -772,7 +772,7 @@
     document.getElementById('sSpan').textContent = t.span[0] ? `${t.span[0]}–${t.span[1]}` : '–';
     document.getElementById('sSpan').parentElement.title = 'Years the trail covers';
     document.getElementById('orderNote').textContent = state.order === 'geo'
-      ? 'Stops in the order that makes the shortest walk between them, measured as the Raven flies.'
+      ? 'Stops in the order that makes the shortest walk between them, measured as the Raven, Oriole and Flamingo fly.'
       : state.order === 'era'
       ? 'Stops grouped by era, oldest era first; inside each era, the shortest walk. Miles are straight lines.'
       : `Stops in historical order, earliest story first.${t.undated ? ` ${t.undated} undated video${t.undated > 1 ? 's' : ''} come last.` : ''} Miles are straight lines.`;
@@ -941,13 +941,13 @@
     const p = Math.PI / 180, h = Math.sin((S[b].lat - S[a].lat) * p / 2) ** 2 + Math.cos(S[a].lat * p) * Math.cos(S[b].lat * p) * Math.sin((S[b].lon - S[a].lon) * p / 2) ** 2;
     return 12742 * Math.asin(Math.sqrt(h));
   };
-  function legText(a, b) {
+  function legText(a, b, tid) {
     const A = S[a], Z = S[b];
     const off = A.away ? A : Z.away ? Z : null;
     if (off) return `Not a real walk: ${off.title} was filmed about ${off.away.km} km ${off.away.dir} of the map and is shown at its edge`;
     if (state.order === 'geo') {
       const r = routed() ? ROUTES[a < b ? `${a}|${b}` : `${b}|${a}`] : null, km = r ? r.km : kmApart(a, b);
-      return `${mi(km).toFixed(1)} miles (${km.toFixed(1)} km) ${r ? 'on foot along streets' : 'as the Raven flies'}`;
+      return `${mi(km).toFixed(1)} miles (${km.toFixed(1)} km) ${r ? 'on foot along streets' : `as the ${edgeBird(tid, a)} flies`}`;   // the bird on this edge: Raven, Oriole or Flamingo
     }
     if (state.order === 'era') {
       const e1 = D.eras[A.era], e2 = D.eras[Z.era];
@@ -959,6 +959,9 @@
   }
   // the walking figure follows the pointer over a leg, facing the way the pointer moves (CSS cannot animate a cursor)
   const FINE = !!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches);
+  // the bird on an edge: the trail's first edge a raven, the second an oriole, the third a flamingo, the fourth a raven again, ...
+  const edgeBirdKey = (tid, a) => BIRDS[Math.max(0, orderOf(TRAIL.get(tid)).indexOf(a)) % BIRDS.length];
+  const edgeBird = (tid, a) => { const k = edgeBirdKey(tid, a); return k[0].toUpperCase() + k.slice(1); };
   let hw = null, hwTrail = null, hwX = null, hwDir = 1;
   function moveWalker(ev, tid, a) {
     if (!FINE) return;
@@ -967,7 +970,7 @@
     // the hover figure is a bird that depends on the edge (Aaron, 2026-11-14): the trail's first edge a raven, the second a Baltimore
     // oriole, the third a pink flamingo, the fourth a raven again, and so on. On the Illustrated map the birds fly; on the Street map they
     // walk (jerky steps with head bobbing). The walking man now only marks the stop in focus.
-    const fig = BIRDS[Math.max(0, orderOf(TRAIL.get(tid)).indexOf(a)) % BIRDS.length], gait = state.base === 'street' ? 'walk' : 'fly';
+    const fig = edgeBirdKey(tid, a), gait = state.base === 'street' ? 'walk' : 'fly';
     const raven = true, key = `${tid}|${fig}|${gait}`;
     if (hwTrail !== key) { hw.replaceChildren(birdSvg(fig, gait)); hwTrail = key; hw.style.width = raven ? '62px' : '37px'; hw.style.height = raven ? '56px' : '54px'; }
     const offX = raven ? 31 : 19, offY = raven ? 28 : 49;
@@ -983,7 +986,7 @@
     const r = document.getElementById('mapbox').getBoundingClientRect();
     tip.innerHTML = '';
     const bb = document.createElement('b'); bb.textContent = `${S[a].title} \u2192 ${S[b].title}`;
-    const sp = document.createElement('span'); sp.textContent = legText(a, b);
+    const sp = document.createElement('span'); sp.textContent = legText(a, b, tid);
     tip.append(bb, sp);
     if (!focus) { const c = document.createElement('span'); c.textContent = `${TRAIL.get(tid).name}: click to focus`; tip.appendChild(c); }
     tip.hidden = false;
