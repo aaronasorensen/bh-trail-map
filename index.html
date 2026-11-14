@@ -840,7 +840,7 @@
     if (!FINE) return;
     const r = document.getElementById('mapbox').getBoundingClientRect();
     if (!hw) { hw = document.createElement('div'); hw.className = 'hwalker'; hw.setAttribute('aria-hidden', 'true'); document.getElementById('mapbox').appendChild(hw); }
-    const raven = state.order === 'geo', key = `${tid}|${raven ? 'raven' : 'walker'}`;   // Shortest walk: the raven flies; the other orders walk
+    const raven = state.order === 'geo' && state.base !== 'street', key = `${tid}|${raven ? 'raven' : 'walker'}`;   // Shortest walk on the illustrated map: the raven flies; every other order, and the whole Street map, shows the walker
     if (hwTrail !== key) { hw.replaceChildren(raven ? ravenSvg() : miniWalker(colorOf(tid), 1.7)); hwTrail = key; hw.style.width = raven ? '62px' : '37px'; hw.style.height = raven ? '56px' : '54px'; }
     const offX = raven ? 31 : 19, offY = raven ? 28 : 49;
     if (hwX != null && Math.abs(ev.clientX - hwX) > 1) hwDir = ev.clientX > hwX ? 1 : -1;
@@ -859,7 +859,7 @@
     tip.append(bb, sp);
     if (!focus) { const c = document.createElement('span'); c.textContent = `${TRAIL.get(tid).name}: click to focus`; tip.appendChild(c); }
     tip.hidden = false;
-    const gx = FINE ? (state.order === 'geo' ? 36 : 26) : 14;   // clear of the figure under the pointer
+    const gx = FINE ? (state.order === 'geo' && state.base !== 'street' ? 36 : 32) : 14;   // clear of the figure under the pointer
     let x = ev.clientX - r.left + gx, y = ev.clientY - r.top + 14;
     if (x + tip.offsetWidth + 6 > r.width) x = Math.max(4, ev.clientX - r.left - tip.offsetWidth - gx);
     if (y + tip.offsetHeight + 6 > r.height) y = Math.max(4, ev.clientY - r.top - tip.offsetHeight - 14);
