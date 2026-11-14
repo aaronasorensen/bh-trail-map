@@ -893,7 +893,7 @@
     const r = document.getElementById('mapbox').getBoundingClientRect();
     if (!hw) { hw = document.createElement('div'); hw.className = 'hwalker'; hw.setAttribute('aria-hidden', 'true'); document.getElementById('mapbox').appendChild(hw); }
     const raven = state.base !== 'street', key = `${tid}|${raven ? 'raven' : 'walker'}`;   // the hover figure follows the map style only (Aaron, 2026-11-14): the Illustrated map always shows the raven, the Street map always the walker
-    if (hwTrail !== key) { hw.replaceChildren(raven ? ravenSvg() : miniWalker('var(--ink)', 1.7, true)); hwTrail = key; hw.style.width = raven ? '62px' : '37px'; hw.style.height = raven ? '56px' : '54px'; }
+    if (hwTrail !== key) { hw.replaceChildren(raven ? ravenSvg() : miniWalker('#5a2fa0', 1.7, true)); hwTrail = key; hw.style.width = raven ? '62px' : '37px'; hw.style.height = raven ? '56px' : '54px'; }
     const offX = raven ? 31 : 19, offY = raven ? 28 : 49;
     if (hwX != null && Math.abs(ev.clientX - hwX) > 1) hwDir = ev.clientX > hwX ? 1 : -1;
     hwX = ev.clientX;
@@ -1110,22 +1110,23 @@
 
   // ---- the walking figure: feet at y = 12, facing +x; limbs swing about their pivots (CSS) ----
   function drawWalker(g, color, solid = false) {   // solid: the hover figure, one ink colour like the raven (Aaron, 2026-11-14)
-    g.append('ellipse').attr('cy', 13).attr('rx', 7).attr('ry', 2.2).attr('fill', 'var(--ink)').attr('opacity', 0.22);
+    const ink = solid ? '#5a2fa0' : 'var(--ink)';   // the solid hover figure is a clear purple (Aaron: it must read purple on the street tiles)
+    g.append('ellipse').attr('cy', 13).attr('rx', 7).attr('ry', 2.2).attr('fill', ink).attr('opacity', 0.22);
     const lean = g.append('g').attr('transform', 'rotate(4)');
     const bob = lean.append('g').attr('class', 'wk-bob');
     const limb = (cls, x, y, len, w) => {
       const sw = bob.append('g').attr('transform', `translate(${x},${y})`).append('g').attr('class', cls);
       sw.append('line').attr('y2', len).attr('stroke', 'var(--panel)').attr('stroke-width', w + 2.6).attr('stroke-linecap', 'round');
-      sw.append('line').attr('y2', len).attr('stroke', 'var(--ink)').attr('stroke-width', w).attr('stroke-linecap', 'round');
+      sw.append('line').attr('y2', len).attr('stroke', ink).attr('stroke-width', w).attr('stroke-linecap', 'round');
     };
     limb('wk-leg-b', 0, 1, 11.5, 2.6); limb('wk-arm-b', 0, -10, 9, 2.2);
-    bob.append('rect').attr('x', -5).attr('y', -11).attr('width', 3.6).attr('height', 6.5).attr('rx', 1.2).attr('fill', color).attr('stroke', 'var(--ink)').attr('stroke-width', 1.2);
+    bob.append('rect').attr('x', -5).attr('y', -11).attr('width', 3.6).attr('height', 6.5).attr('rx', 1.2).attr('fill', color).attr('stroke', ink).attr('stroke-width', 1.2);
     bob.append('line').attr('y1', -12).attr('y2', 1).attr('stroke', 'var(--panel)').attr('stroke-width', 5.6).attr('stroke-linecap', 'round');
-    bob.append('line').attr('y1', -12).attr('y2', 1).attr('stroke', 'var(--ink)').attr('stroke-width', 3).attr('stroke-linecap', 'round');
+    bob.append('line').attr('y1', -12).attr('y2', 1).attr('stroke', ink).attr('stroke-width', 3).attr('stroke-linecap', 'round');
     limb('wk-leg-a', 0, 1, 11.5, 2.6); limb('wk-arm-a', 0, -10, 9, 2.2);
-    bob.append('circle').attr('cx', 0.6).attr('cy', -17).attr('r', 4).attr('fill', solid ? 'var(--ink)' : 'var(--panel)').attr('stroke', solid ? 'var(--panel)' : 'var(--ink)').attr('stroke-width', solid ? 1.3 : 1.8).attr('paint-order', 'stroke');
-    bob.append('path').attr('d', 'M-3.4,-18.2 A4,4 0 0 1 4.6,-18.2 Z').attr('fill', color).attr('stroke', 'var(--ink)').attr('stroke-width', 1.2);
-    bob.append('path').attr('d', 'M3.8,-18.3 L7.6,-17.6').attr('stroke', 'var(--ink)').attr('stroke-width', 1.8).attr('stroke-linecap', 'round');
+    bob.append('circle').attr('cx', 0.6).attr('cy', -17).attr('r', 4).attr('fill', solid ? ink : 'var(--panel)').attr('stroke', solid ? 'var(--panel)' : ink).attr('stroke-width', solid ? 1.3 : 1.8).attr('paint-order', 'stroke');
+    bob.append('path').attr('d', 'M-3.4,-18.2 A4,4 0 0 1 4.6,-18.2 Z').attr('fill', color).attr('stroke', ink).attr('stroke-width', 1.2);
+    bob.append('path').attr('d', 'M3.8,-18.3 L7.6,-17.6').attr('stroke', ink).attr('stroke-width', 1.8).attr('stroke-linecap', 'round');
   }
   // an original raven in the map's hand-inked style, three-quarter view (head and beak toward the viewer, facing +x).
   // It is a sprite sequence: eight poses, each with its own far wing and near wing, copied from the reference GIF.
