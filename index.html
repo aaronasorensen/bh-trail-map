@@ -1131,7 +1131,7 @@
   // an original raven in the map's hand-inked style, three-quarter view (head and beak toward the viewer, facing +x).
   // It is a sprite sequence: eight poses, each with its own far wing and near wing, copied from the reference GIF.
   function drawRaven(g) {
-    const ink = 'var(--ink)', soft = 'var(--ink-soft)';
+    const ink = '#5a2fa0', soft = '#9b7fd1';   // the raven and the hover walker share one clear purple (Aaron, 2026-11-14)
     const ring = (e, w = 1.3) => e.attr('stroke', 'var(--panel)').attr('stroke-width', w).attr('stroke-linejoin', 'round').attr('paint-order', 'stroke');
     // [far wing, near wing, body dy]
     const POSES = [
