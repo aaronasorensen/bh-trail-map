@@ -579,7 +579,7 @@
   try {
     const saved = JSON.parse(localStorage.getItem('bh-trails') || 'null');
     if (saved && D.trails.some((t) => t.id === saved.trail)) {
-      state = { ...state, trail: saved.trail, order: saved.order || 'geo', current: null, base: saved.base === 'street' ? 'street' : 'ill' };
+      state = { ...state, trail: saved.trail, order: 'geo', current: null, base: 'ill' };   // a plain visit always opens on the Illustrated map and Shortest walk (Aaron, 2026-11-14); a shared link's own settings still win (see parseUrl)
       const c = Array.isArray(saved.cmp) && saved.cmp.length === 5 ? saved.cmp.map((x) => (D.trails.some((t) => t.id === x) ? x : null)) : [saved.trail, null, null, null, null];
       if (!c.includes(saved.trail)) c[c.indexOf(null) >= 0 ? c.indexOf(null) : 0] = saved.trail;
       state.cmp = c;
@@ -1607,6 +1607,10 @@
     if (micOpen && !state.current) q.set('mic', '1');
     if (state.base === 'street') q.set('map', 'street');
     if (withZoom) { const t = d3.zoomTransform(svg.node()); q.set('z', [t.k, t.x, t.y].map((v) => +v.toFixed(2)).join(',')); }
+    // keep every parameter that is not the map's own (utm_source and the other campaign tags, ref, ...), so a shared link keeps its
+    // Google Analytics campaign attribution when the address is rewritten into the map's form; ga is consumed (it lives in storage)
+    const mine = ['trails', 'focus', 'stop', 'order', 'map', 'mic', 'z', 'ga'];
+    new URLSearchParams(location.search).forEach((v, k) => { if (!mine.includes(k)) q.append(k, v); });
     return q.toString().replace(/%2C/g, ',');
   }
   function urlSync() {
