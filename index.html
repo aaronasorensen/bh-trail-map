@@ -772,7 +772,7 @@
     document.getElementById('sSpan').textContent = t.span[0] ? `${t.span[0]}–${t.span[1]}` : '–';
     document.getElementById('sSpan').parentElement.title = 'Years the trail covers';
     document.getElementById('orderNote').textContent = state.order === 'geo'
-      ? 'Stops in the order that makes the shortest walk between them, measured as the Raven, Oriole and Flamingo fly.'
+      ? 'Stops in the order that makes the shortest walk between them, measured as the Raven, Oriole and Flamingo ' + (state.base === 'street' ? 'walk' : 'fly') + '.'
       : state.order === 'era'
       ? 'Stops grouped by era, oldest era first; inside each era, the shortest walk. Miles are straight lines.'
       : `Stops in historical order, earliest story first.${t.undated ? ` ${t.undated} undated video${t.undated > 1 ? 's' : ''} come last.` : ''} Miles are straight lines.`;
@@ -947,7 +947,7 @@
     if (off) return `Not a real walk: ${off.title} was filmed about ${off.away.km} km ${off.away.dir} of the map and is shown at its edge`;
     if (state.order === 'geo') {
       const r = routed() ? ROUTES[a < b ? `${a}|${b}` : `${b}|${a}`] : null, km = r ? r.km : kmApart(a, b);
-      return `${mi(km).toFixed(1)} miles (${km.toFixed(1)} km) ${r ? 'on foot along streets' : `as the ${edgeBird(tid, a)} flies`}`;   // the bird on this edge: Raven, Oriole or Flamingo
+      return `${mi(km).toFixed(1)} miles (${km.toFixed(1)} km) ${r ? 'on foot along streets' : `as the ${edgeBird(tid, a)} ${state.base === 'street' ? 'walks' : 'flies'}`}`;   // the bird on this edge: Raven, Oriole or Flamingo
     }
     if (state.order === 'era') {
       const e1 = D.eras[A.era], e2 = D.eras[Z.era];
