@@ -209,7 +209,7 @@
   .wrap.map-min .tour, .tour.is-max { display: flex; flex-direction: column; min-height: 0; }
   .wrap.map-min .strip, .tour.is-max .strip { flex: 1; flex-wrap: wrap; align-content: flex-start; overflow: auto; }
   .wrap.map-min .tstop::after, .tour.is-max .tstop::after { display: none; }
-  .is-max { position: fixed !important; inset: 16px; z-index: 40; height: auto !important; overflow: auto; }
+  .is-max { position: fixed !important; inset: 16px; z-index: 40 !important; height: auto !important; overflow: auto; }   /* !important: the stop card's own `.mapdock > .card { z-index: 3 }` is more specific and kept it under the dimming backdrop (z 39), so maximizing it grayed the video too (Aaron, 2026-11-15) */
   .mapbox.is-max { overflow: hidden; }
   .backdrop { position: fixed; inset: 0; z-index: 39; background: rgba(38, 36, 70, .45); }
   .card.guide-main.is-max { max-width: 640px; margin: 0 auto; font-size: 16px; }
