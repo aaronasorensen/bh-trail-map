@@ -958,7 +958,7 @@ if (location.protocol === 'http:' && location.hostname === '5-min-histories.make
     if (off) return `Not a real walk: ${off.title} was filmed about ${off.away.km} km ${off.away.dir} of the map and is shown at its edge`;
     if (state.order === 'geo') {
       const r = routed() ? ROUTES[a < b ? `${a}|${b}` : `${b}|${a}`] : null, km = r ? r.km : kmApart(a, b);
-      return `${mi(km).toFixed(1)} miles (${km.toFixed(1)} km) ${r ? 'on foot along streets' : `as the ${edgeBird(tid, a)} ${state.base === 'street' ? 'struts' : 'flies'}`}`;   // the bird on this edge: Raven, Oriole or Flamingo
+      return `${mi(km).toFixed(1)} miles (${km.toFixed(1)} km) ${state.base === 'street' ? `as the ${edgeBird(tid, a)} struts` : r ? 'on foot along streets' : `as the ${edgeBird(tid, a)} flies`}`;   // the bird on this edge: Raven, Oriole or Flamingo
     }
     if (state.order === 'era') {
       const e1 = D.eras[A.era], e2 = D.eras[Z.era];
